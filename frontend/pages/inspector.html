@@ -302,6 +302,7 @@
           document.getElementById('app-bar').style.display = 'flex';
           document.getElementById('u-name').textContent = USER.full_name.split(' ')[0];
           loadDashboard();
+          document.getElementById('dash-view').classList.add('active');
           return;
         } else {
           // Force logout for private owners / non-inspectors who stumble here
@@ -329,7 +330,7 @@
       
       btn.textContent = 'Sign In'; btn.disabled = false;
       
-      if (r.ok && (r.data.user.role === 'inspector' || r.data.user.role === 'admin')) {
+      if (r.ok && r.data.user && (r.data.user.role === 'inspector' || r.data.user.role === 'admin')) {
         TOKEN = r.data.access_token;
         USER = r.data.user;
         localStorage.setItem('tah_token', TOKEN);
@@ -337,7 +338,7 @@
         checkAuth();
         toast('Login successful', 'ok');
       } else {
-        toast(r.ok ? 'Access Denied: Inspectors only' : r.data.detail || 'Login failed', 'err');
+        toast(r.ok ? 'Access Denied: Inspector or Admin role required.' : r.data.detail || 'Login failed', 'err');
       }
     }
 
