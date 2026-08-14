@@ -836,7 +836,7 @@ async function createUser(event) {
         phone_number: phone ? phone : null
     };
 
-    // CORRECTED: Use the secure admin endpoint, not public registration
+    // Ensure we are calling the correct, secure admin endpoint
     const r = await API.post('/admin/users/create', payload);
 
     UI.btnLoading(btn, false, 'Create User');
