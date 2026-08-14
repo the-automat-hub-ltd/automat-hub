@@ -1,0 +1,29 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # daily at 2am UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install postgres client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          pg_dump "postgresql://postgres.emqryzqzagmwxjpngprz:${PGPASSWORD}@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" \
+            --no-owner --no-privileges -F c -f backup_$(date +%Y%m%d_%H%M%S).dump
+
+      - name: Send backup via Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          FILE=$(ls backup_*.dump)
+          curl -F "chat_id=${CHAT_ID}" -F "document=@${FILE}" \
+            "https://api.telegram.org/bot${BOT_TOKEN}/sendDocument"
