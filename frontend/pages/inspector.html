@@ -349,6 +349,8 @@
         localStorage.removeItem('tah_user');
         TOKEN = ''; USER = null;
         checkAuth();
+        // Explicitly show the login view again
+        document.getElementById('login-view').style.display = 'flex';
       }
     }
 
