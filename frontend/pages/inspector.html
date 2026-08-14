@@ -299,6 +299,7 @@
       if (TOKEN && USER) {
         if (USER.role === 'inspector' || USER.role === 'admin') {
           document.getElementById('login-view').classList.remove('active');
+          document.getElementById('login-view').style.display = 'none';
           document.getElementById('app-bar').style.display = 'flex';
           document.getElementById('u-name').textContent = USER.full_name.split(' ')[0];
           loadDashboard();

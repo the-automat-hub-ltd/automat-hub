@@ -698,6 +698,172 @@ function showPanel(name) {
   loaders[name]?.();
 }
 
+function renderPendingWorkshops(d) {
+    const list = document.getElementById('pending-workshops');
+    if (!d?.success || !d.workshops || d.workshops.length === 0) {
+        list.innerHTML = `<div style="color:var(--muted);font-size:13px">No pending approvals.</div>`;
+        return;
+    }
+    list.innerHTML = d.workshops.map(w => `
+        <div class="ws-row">
+            <div>
+                <div class="ws-name">${w.name}</div>
+                <div class="ws-meta">${w.address}, ${w.state}</div>
+            </div>
+            <div class="ws-actions">
+                <button class="btn btn-primary btn-sm" onclick="approveWorkshop('${w.workshop_id}', this)">Approve</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function approveWorkshop(workshopId, btn) {
+    UI.btnLoading(btn, true);
+    const r = await API.post(`/admin/workshops/${workshopId}/approve`);
+    if (r?.success) {
+        UI.toast('Workshop Approved', 'success');
+        loadOverview();
+        if (document.getElementById('panel-workshops').classList.contains('active')) {
+            loadWorkshops();
+        }
+    } else {
+        UI.toast(r?.detail || 'Failed to approve', 'error');
+        UI.btnLoading(btn, false, 'Approve');
+    }
+}
+
+async function loadUsers(role = null) {
+    const body = document.getElementById('users-table-body');
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading users...</td></tr>`;
+    const url = role ? `/admin/users?role=${role}` : '/admin/users';
+    const d = await API.get(url);
+    if (!d?.success || !d.users) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--red);padding:30px">Failed to load users.</td></tr>`;
+        return;
+    }
+    if (d.users.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No users found for this filter.</td></tr>`;
+        return;
+    }
+    body.innerHTML = d.users.map(u => `
+        <tr>
+            <td>${u.full_name}</td>
+            <td>${u.email}</td>
+            <td>${UI.badge(u.role.replace('_', ' '))}</td>
+            <td>${UI.badge(u.subscription_plan, 'blue')}</td>
+            <td>${u.vehicle_slots}</td>
+            <td>${u.is_active ? UI.badge('Active', 'green') : UI.badge('Suspended', 'red')}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteUser('${u.user_id}', '${u.full_name}')">Delete</button></td>
+        </tr>
+    `).join('');
+}
+
+async function loadInspectors() {
+    const body = document.getElementById('inspectors-table-body');
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Loading inspectors...</td></tr>`;
+    const d = await API.get('/admin/inspectors');
+    if (!d?.success || !d.inspectors) return;
+    body.innerHTML = d.inspectors.map(i => `
+        <tr>
+            <td>${i.full_name}</td>
+            <td>${i.email}</td>
+            <td>${i.phone || 'N/A'}</td>
+            <td>${i.dcp_count}</td>
+            <td>${i.rating} ★</td>
+            <td>${i.is_active ? UI.badge('Active', 'green') : UI.badge('Inactive', 'red')}</td>
+        </tr>
+    `).join('');
+}
+
+function showCreateUserModal() {
+    document.getElementById('modal-title').textContent = 'Create New User';
+    const body = document.getElementById('modal-body');
+    body.innerHTML = `
+        <form id="create-user-form" onsubmit="createUser(event)">
+            <div class="fg">
+                <label>Full Name</label>
+                <input type="text" id="cu-name" required>
+            </div>
+            <div class="fg">
+                <label>Email</label>
+                <input type="email" id="cu-email" required>
+            </div>
+            <div class="fg">
+                <label>Password</label>
+                <input type="text" id="cu-password" required value="${generatePassword()}">
+            </div>
+            <div class="fg">
+                <label>Role</label>
+                <select id="cu-role">
+                    <option value="inspector">Inspector</option>
+                    <option value="private_owner">Private Owner</option>
+                    <option value="fleet_owner">Fleet Owner</option>
+                    <option value="reseller">Reseller</option>
+                    <option value="mechanic">Mechanic</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px" id="cu-submit-btn">Create User</button>
+        </form>
+    `;
+    openModal();
+}
+
+function generatePassword(length = 12) {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+async function createUser(event) {
+    event.preventDefault();
+    const btn = document.getElementById('cu-submit-btn');
+    UI.btnLoading(btn, true);
+
+    const payload = {
+        full_name: document.getElementById('cu-name').value,
+        email: document.getElementById('cu-email').value,
+        password: document.getElementById('cu-password').value,
+        role: document.getElementById('cu-role').value,
+    };
+
+    const r = await API.post('/admin/users/create', payload);
+
+    UI.btnLoading(btn, false, 'Create User');
+
+    if (r?.success) {
+        UI.toast(r.message, 'success');
+        closeModal();
+        loadUsers(); // Refresh the user list
+    } else {
+        UI.toast(r?.detail || 'Failed to create user', 'error');
+    }
+}
+
+async function deleteUser(userId, userName) {
+    if (!confirm(`Are you sure you want to permanently delete ${userName}? This will also delete all their vehicles, fleets, and other associated data. This action cannot be undone.`)) {
+        return;
+    }
+    const r = await API.del(`/admin/users/${userId}`);
+    if (r?.success) {
+        UI.toast(r.message, 'success');
+        loadUsers();
+    } else {
+        UI.toast(r?.detail || 'Failed to delete user', 'error');
+    }
+}
+
+function openModal() {
+    document.getElementById('modal-backdrop').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('modal-backdrop').style.display = 'none';
+}
+
 // ── DATA LOADERS ──────────────────────────────────────────────
 async function loadOverview() {
   try {
