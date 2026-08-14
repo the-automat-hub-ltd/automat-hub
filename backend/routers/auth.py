@@ -82,10 +82,26 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
     if not user or not verify_password(request.password, user.password_hash):
         raise HTTPException(401, "Invalid email or password")
-    if not user.is_active:
-        raise HTTPException(403, "Account suspended. Contact support.")
+
+    registration_stage = None
+    if user.role == "inspector":
+        # Inspectors go through a 3-stage self-registration flow, during
+        # which is_active stays False until stage 3 completes. Don't treat
+        # that as "suspended" — only block accounts that finished
+        # registration and were later suspended by an admin.
+        from backend.models.inspector import InspectorProfile, RegistrationStage
+        profile_result = await db.execute(select(InspectorProfile).where(InspectorProfile.user_id == user.user_id))
+        profile = profile_result.scalar_one_or_none()
+        registration_stage = profile.registration_stage if profile else None
+        if not user.is_active and registration_stage == RegistrationStage.COMPLETE:
+            raise HTTPException(403, "Account suspended. Contact support.")
+    else:
+        if not user.is_active:
+            raise HTTPException(403, "Account suspended. Contact support.")
+
     token = create_access_token(data={"sub": user.user_id, "role": user.role, "email": user.email})
     return {"success": True, "access_token": token, "token_type": "bearer",
+            "registration_stage": registration_stage,
             "user": {"user_id": user.user_id, "full_name": user.full_name, "email": user.email,
                      "role": user.role, "subscription_plan": user.subscription_plan,
                      "subscription_status": user.subscription_status, "vehicle_slots": user.vehicle_slots}}

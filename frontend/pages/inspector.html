@@ -86,11 +86,71 @@
       <div style="font-size:0.85rem; color:var(--c-text2);">The Automat Hub Field Interface</div>
     </div>
     <div class="login-box">
-      <form onsubmit="doLogin(event)">
-        <div class="fg"><label>Email</label><input type="email" id="l-email" required></div>
-        <div class="fg"><label>Password</label><input type="password" id="l-pw" required></div>
-        <button type="submit" class="btn btn-orange" id="login-btn">Sign In</button>
-      </form>
+      <div style="display:flex; gap:8px; margin-bottom:20px;">
+        <div class="w-tab active" id="auth-tab-login" onclick="showAuthView('login')" style="cursor:pointer;">Sign In</div>
+        <div class="w-tab" id="auth-tab-register" onclick="showAuthView('register')" style="cursor:pointer;">Register</div>
+      </div>
+
+      <!-- SIGN IN FORM -->
+      <div id="signin-form">
+        <form onsubmit="doLogin(event)">
+          <div class="fg"><label>Email</label><input type="email" id="l-email" required></div>
+          <div class="fg"><label>Password</label><input type="password" id="l-pw" required></div>
+          <button type="submit" class="btn btn-orange" id="login-btn">Sign In</button>
+        </form>
+      </div>
+
+      <!-- REGISTRATION WIZARD (3 STAGES) -->
+      <div id="register-form" style="display:none;">
+        <div class="wizard-nav" style="margin-bottom:20px;">
+          <div class="w-tab active" id="reg-tab-1">1. Details</div>
+          <div class="w-tab" id="reg-tab-2">2. Verify</div>
+          <div class="w-tab" id="reg-tab-3">3. Liveness</div>
+        </div>
+
+        <!-- STAGE 1: DETAILS -->
+        <div class="step active" id="reg-step-1">
+          <div class="fg"><label>Full Name</label><input type="text" id="rs1-name" required></div>
+          <div class="fg"><label>Email</label><input type="email" id="rs1-email" required></div>
+          <div class="fg"><label>Phone</label><input type="text" id="rs1-phone" required></div>
+          <div class="fg"><label>Sex</label>
+            <select id="rs1-sex">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="fg"><label>Password (min. 8 characters)</label><input type="password" id="rs1-pw" required></div>
+          <button type="button" class="btn btn-orange" id="rs1-btn" onclick="doRegStage1()">Continue →</button>
+        </div>
+
+        <!-- STAGE 2: KYC + BANK -->
+        <div class="step" id="reg-step-2">
+          <div style="font-size:0.75rem; color:var(--c-text2); line-height:1.5; margin-bottom:16px; background:rgba(232,131,9,0.08); padding:10px; border-radius:8px;">
+            Your BVN and NIN cannot be changed once submitted. Full government verification is not yet connected — this is a test-phase check.
+          </div>
+          <div class="fg"><label>BVN (11 digits)</label><input type="text" id="rs2-bvn" maxlength="11" inputmode="numeric" required></div>
+          <div class="fg"><label>NIN (11 digits)</label><input type="text" id="rs2-nin" maxlength="11" inputmode="numeric" required></div>
+          <div class="fg"><label>Bank Name</label><input type="text" id="rs2-bankname" required></div>
+          <div class="fg">
+            <label>Account Number (10 digits)</label>
+            <input type="text" id="rs2-acctnum" maxlength="10" inputmode="numeric" required>
+            <div id="rs2-resolved" style="font-family:var(--f-mono); font-size:0.75rem; color:var(--c-green); margin-top:8px; display:none;"></div>
+          </div>
+          <button type="button" class="btn btn-orange" id="rs2-btn" onclick="doRegStage2()">Continue →</button>
+        </div>
+
+        <!-- STAGE 3: LIVENESS -->
+        <div class="step" id="reg-step-3">
+          <div style="font-size:0.85rem; color:var(--c-text2); margin-bottom:16px;">Take a clear photo of your face to complete registration.</div>
+          <div style="border:1px dashed var(--c-orange); border-radius:12px; padding:24px; text-align:center; margin-bottom:16px;">
+            <img id="rs3-preview" style="width:130px; height:130px; border-radius:50%; object-fit:cover; display:none; margin:0 auto 14px; border:3px solid var(--c-orange);">
+            <input type="file" id="rs3-file" accept="image/*" capture="user" style="display:none;" onchange="handleRegLiveness(event)">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('rs3-file').click()">📷 Take Photo</button>
+          </div>
+          <button type="button" class="btn btn-orange" id="rs3-btn" onclick="doRegStage3()" disabled>Complete Registration</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -294,6 +354,22 @@
       } catch(e) { return { ok: false, data: { detail: 'Network error' } }; }
     }
 
+    // --- LOGIN / REGISTER TAB TOGGLE ---
+    function showAuthView(view) {
+      document.getElementById('auth-tab-login').classList.toggle('active', view === 'login');
+      document.getElementById('auth-tab-register').classList.toggle('active', view === 'register');
+      document.getElementById('signin-form').style.display = view === 'login' ? 'block' : 'none';
+      document.getElementById('register-form').style.display = view === 'register' ? 'block' : 'none';
+    }
+
+    function goToRegStage(n) {
+      document.querySelectorAll('#register-form .step').forEach((e, i) => e.classList.toggle('active', i === n - 1));
+      document.querySelectorAll('#register-form .w-tab').forEach((e, i) => {
+        e.classList.toggle('active', i === n - 1);
+        e.classList.toggle('done', i < n - 1);
+      });
+    }
+
     // --- INITIALIZATION ---
     function checkAuth() {
       if (TOKEN && USER) {
@@ -314,6 +390,7 @@
         }
       }
       document.getElementById('login-view').classList.add('active');
+      document.getElementById('login-view').style.display = 'flex';
       document.getElementById('dash-view').classList.remove('active');
       document.getElementById('inspect-view').classList.remove('active');
       document.getElementById('app-bar').style.display = 'none';
@@ -323,24 +400,130 @@
       e.preventDefault();
       const btn = document.getElementById('login-btn');
       btn.textContent = 'Authenticating...'; btn.disabled = true;
-      
+
       const r = await api('POST', '/auth/login', {
         email: document.getElementById('l-email').value,
         password: document.getElementById('l-pw').value
       });
-      
+
       btn.textContent = 'Sign In'; btn.disabled = false;
-      
+
       if (r.ok && r.data.user && (r.data.user.role === 'inspector' || r.data.user.role === 'admin')) {
         TOKEN = r.data.access_token;
         USER = r.data.user;
         localStorage.setItem('tah_token', TOKEN);
         localStorage.setItem('tah_user', JSON.stringify(USER));
+
+        // If this inspector never finished registration, resume where they left off
+        // instead of dropping them into the dashboard.
+        const stage = r.data.registration_stage;
+        if (USER.role === 'inspector' && stage && stage !== 'complete') {
+          toast('Please finish registration to continue.', 'info');
+          showAuthView('register');
+          if (stage === 'verification') goToRegStage(2);
+          else if (stage === 'liveness') goToRegStage(3);
+          else goToRegStage(1);
+          return;
+        }
+
         checkAuth();
         toast('Login successful', 'ok');
       } else {
         toast(r.ok ? 'Access Denied: Inspector or Admin role required.' : r.data.detail || 'Login failed', 'err');
       }
+    }
+
+    // --- REGISTRATION: STAGE 1 (DETAILS) ---
+    async function doRegStage1() {
+      const pw = document.getElementById('rs1-pw').value;
+      if (pw.length < 8) { toast('Password must be at least 8 characters', 'err'); return; }
+      const btn = document.getElementById('rs1-btn');
+      btn.textContent = 'Please wait...'; btn.disabled = true;
+
+      const r = await api('POST', '/inspectors/register/stage1', {
+        full_name: document.getElementById('rs1-name').value,
+        email: document.getElementById('rs1-email').value,
+        phone: document.getElementById('rs1-phone').value,
+        sex: document.getElementById('rs1-sex').value,
+        password: pw
+      });
+
+      btn.textContent = 'Continue →'; btn.disabled = false;
+
+      if (!r.ok) { toast(r.data.detail || 'Registration failed', 'err'); return; }
+
+      TOKEN = r.data.access_token;
+      USER = r.data.user || { user_id: r.data.user_id, role: 'inspector' };
+      localStorage.setItem('tah_token', TOKEN);
+      localStorage.setItem('tah_user', JSON.stringify(USER));
+      goToRegStage(2);
+    }
+
+    // --- REGISTRATION: STAGE 2 (KYC + BANK) ---
+    async function doRegStage2() {
+      const bvn = document.getElementById('rs2-bvn').value.trim();
+      const nin = document.getElementById('rs2-nin').value.trim();
+      const acct = document.getElementById('rs2-acctnum').value.trim();
+      if (!/^\d{11}$/.test(bvn)) { toast('BVN must be exactly 11 digits', 'err'); return; }
+      if (!/^\d{11}$/.test(nin)) { toast('NIN must be exactly 11 digits', 'err'); return; }
+      if (!/^\d{10}$/.test(acct)) { toast('Account number must be exactly 10 digits', 'err'); return; }
+
+      const btn = document.getElementById('rs2-btn');
+      btn.textContent = 'Verifying...'; btn.disabled = true;
+
+      const r = await api('POST', '/inspectors/register/stage2', {
+        bvn, nin,
+        bank_name: document.getElementById('rs2-bankname').value,
+        bank_account_number: acct
+      });
+
+      btn.textContent = 'Continue →'; btn.disabled = false;
+
+      if (!r.ok) { toast(r.data.detail || 'Verification failed', 'err'); return; }
+
+      const resolved = document.getElementById('rs2-resolved');
+      resolved.textContent = 'Resolved account name: ' + r.data.bank_account_name;
+      resolved.style.display = 'block';
+      toast('Identity verified', 'ok');
+      setTimeout(() => goToRegStage(3), 900);
+    }
+
+    // --- REGISTRATION: STAGE 3 (LIVENESS) ---
+    let regLivenessBase64 = null;
+
+    function handleRegLiveness(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        regLivenessBase64 = evt.target.result;
+        const preview = document.getElementById('rs3-preview');
+        preview.src = regLivenessBase64;
+        preview.style.display = 'block';
+        document.getElementById('rs3-btn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function doRegStage3() {
+      if (!regLivenessBase64) { toast('Please take a photo first', 'err'); return; }
+      const btn = document.getElementById('rs3-btn');
+      btn.textContent = 'Finalizing...'; btn.disabled = true;
+
+      const r = await api('POST', '/inspectors/register/stage3', {
+        liveness_image_base64: regLivenessBase64
+      });
+
+      if (!r.ok) {
+        toast(r.data.detail || 'Liveness check failed', 'err');
+        btn.textContent = 'Complete Registration'; btn.disabled = false;
+        return;
+      }
+
+      USER.is_active = true;
+      localStorage.setItem('tah_user', JSON.stringify(USER));
+      toast('Registration complete! Welcome to The Automat Hub.', 'ok');
+      checkAuth();
     }
 
     function logout() {

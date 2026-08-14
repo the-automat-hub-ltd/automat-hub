@@ -15,6 +15,7 @@ from backend.models.escrow import EscrowDeal, EscrowEvent
 from backend.models.fleet import TrackedVehicle, HourlyScan, VehicleAlert, LocationHistory, Fleet
 from backend.models.workshop import Workshop, RepairJob
 from backend.models.user import User, ResellerAPIKey, Subscription
+from backend.models.inspector import InspectorProfile, PayoutRequest   # ← add this line
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

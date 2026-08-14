@@ -26,6 +26,10 @@ from backend.routers.subscription import router as subscription_router
 from backend.routers.manufacturer import router as manufacturer_router
 from backend.config import settings
 
+from backend.routers import (
+    dcp, escrow, auth, webhooks,
+    fleet, reseller, admin, workshop, tracking, inspector
+)
 
 def validate_environment():
     # List the exact attributes defined in your Settings class
@@ -109,6 +113,7 @@ app.include_router(workshop.router)
 app.include_router(tracking.router)
 app.include_router(manufacturer_router)
 app.include_router(subscription_router)
+app.include_router(inspector.router)
 
 from fastapi.staticfiles import StaticFiles
 
