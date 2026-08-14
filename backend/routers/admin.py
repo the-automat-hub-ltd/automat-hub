@@ -356,7 +356,7 @@ async def list_inspectors(
             "user_id": u.user_id,
             "full_name": u.full_name,
             "email": u.email,
-            "phone": u.phone_number,
+            "phone": u.phone,
             "is_active": u.is_active,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "dcp_count": dcp_counts.get(u.user_id, 0),
