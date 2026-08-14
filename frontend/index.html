@@ -4392,19 +4392,20 @@
         </tr>`).join('');
     }
 
-    window.doCreateInspector = async function(e) {
+    window.doCreateInspector = async function (e) {
         e.preventDefault();
         const btn = document.getElementById('ni-btn');
         btn.innerHTML = '<div class="spin" style="display:block"></div>'; btn.disabled = true;
-        
-        // We re-use the standard registration endpoint, but enforce the inspector role
-        const r = await api('POST', '/auth/register', {
-            full_name: document.getElementById('ni-name').value,
-            email: document.getElementById('ni-email').value,
-            phone: document.getElementById('ni-phone').value,
-            password: document.getElementById('ni-pw').value,
-            role: 'inspector'
-        }, false);
+
+        // Uses the admin-only user creation endpoint, which allows staff roles
+        // like inspector/admin that the public /auth/register endpoint rejects.
+        const r = await api('POST', '/admin/users/create', {
+          full_name: document.getElementById('ni-name').value,
+          email: document.getElementById('ni-email').value,
+          phone_number: document.getElementById('ni-phone').value,
+          password: document.getElementById('ni-pw').value,
+          role: 'inspector'
+        }, true);
         
         btn.innerHTML = 'Create Inspector'; btn.disabled = false;
         if (r?.ok) { toast('Success', 'Inspector account created.', 'ok'); closeModal('new-inspector-modal'); loadAdminInspectors(); }
