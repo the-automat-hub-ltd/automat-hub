@@ -388,21 +388,21 @@ async def admin_create_user(
 
     user_id = f"USR-{str(uuid.uuid4())[:8].upper()}"
 
-    new_user = User(
-        user_id=user_id,
-        full_name=request.full_name,
-        email=request.email,
-        password_hash=hash_password(request.password),
-        role=request.role,
-        phone_number=request.phone_number,
-        is_active=True,
-        email_verified=True, # Admins create verified users by default
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-        subscription_plan='free',
-        subscription_status='active',
-        vehicle_slots=1 if request.role == 'private_owner' else 5 # Default slots
-    )
+   new_user = User(
+    user_id=user_id,
+    full_name=request.full_name,
+    email=request.email,
+    password_hash=hash_password(request.password),
+    role=request.role,
+    phone=request.phone_number,
+    is_active=True,
+    email_verified=True, # Admins create verified users by default
+    created_at=datetime.now(timezone.utc),
+    updated_at=datetime.now(timezone.utc),
+    subscription_plan='free',
+    subscription_status='active',
+    vehicle_slots=1 if request.role == 'private_owner' else 5 # Default slots
+)
 
     db.add(new_user)
     await db.commit()
