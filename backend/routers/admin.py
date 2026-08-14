@@ -128,8 +128,6 @@ async def platform_overview(
         .group_by(User.full_name)
     )
     inspector_rev_data = {name: count * 5000 for name, count in inspector_rev_query.all() if name}
-    if not inspector_rev_data:
-        inspector_rev_data = {"Oloruntoba Anate": 125000, "Samuel Jackson": 85000, "Sarah Connor": 45000}
     
     # 6-Month Trend Data
     trend_labels = []
@@ -358,7 +356,7 @@ async def list_inspectors(
             "user_id": u.user_id,
             "full_name": u.full_name,
             "email": u.email,
-            "phone": u.phone,
+            "phone": u.phone_number,
             "is_active": u.is_active,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "dcp_count": dcp_counts.get(u.user_id, 0),
