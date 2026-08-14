@@ -823,23 +823,26 @@ async function createUser(event) {
     const btn = document.getElementById('cu-submit-btn');
     UI.btnLoading(btn, true);
 
+    const phone = document.getElementById('cu-phone').value;
     const payload = {
         full_name: document.getElementById('cu-name').value,
         email: document.getElementById('cu-email').value,
         password: document.getElementById('cu-password').value,
         role: document.getElementById('cu-role').value,
+        phone_number: phone ? phone : null
     };
 
+    // CORRECTED: Use the secure admin endpoint, not public registration
     const r = await API.post('/admin/users/create', payload);
 
     UI.btnLoading(btn, false, 'Create User');
 
     if (r?.success) {
-        UI.toast(r.message, 'success');
+        UI.toast(r.message || 'User created successfully.', 'success');
         closeModal();
         loadUsers(); // Refresh the user list
     } else {
-        UI.toast(r?.detail || 'Failed to create user', 'error');
+        UI.toast(r?.detail || 'An error occurred while creating the user.', 'error');
     }
 }
 
