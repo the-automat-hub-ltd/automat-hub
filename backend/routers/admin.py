@@ -110,17 +110,17 @@ async def platform_overview(
         select(func.count(HourlyScan.id))
         .where(HourlyScan.scanned_at >= today_start)
     )
-    
+
     # Chart Distributions
     dcp_grades = await db.execute(select(DCPRecord.grade, func.count(DCPRecord.id)).group_by(DCPRecord.grade))
     grade_dist = {g: c for g, c in dcp_grades.all()}
-    
+
     escrow_status = await db.execute(select(EscrowDeal.status, func.count(EscrowDeal.id)).group_by(EscrowDeal.status))
     escrow_dist = {s: c for s, c in escrow_status.all()}
-    
+
     veh_status = await db.execute(select(TrackedVehicle.status, func.count(TrackedVehicle.id)).group_by(TrackedVehicle.status))
     veh_dist = {s: c for s, c in veh_status.all()}
-    
+
     # Inspector Revenue (DCPs issued * 5000 NGN)
     inspector_rev_query = await db.execute(
         select(User.full_name, func.count(DCPRecord.id))
@@ -128,26 +128,26 @@ async def platform_overview(
         .group_by(User.full_name)
     )
     inspector_rev_data = {name: count * 5000 for name, count in inspector_rev_query.all() if name}
-    
+
     # 6-Month Trend Data
     trend_labels = []
     vol_data = []
     fees_data = []
     users_data = []
-    
+
     for i in range(5, -1, -1):
         dt = now - timedelta(days=30*i)
         start_dt = dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end_dt = start_dt.replace(year=start_dt.year+1, month=1) if start_dt.month == 12 else start_dt.replace(month=start_dt.month+1)
-            
+
         trend_labels.append(start_dt.strftime("%b"))
-        
+
         u_count = await db.scalar(select(func.count(User.id)).where(and_(User.created_at >= start_dt, User.created_at < end_dt)))
         users_data.append(u_count or 0)
-        
+
         vol = await db.scalar(select(func.sum(EscrowDeal.amount_usd)).where(and_(EscrowDeal.completed_at >= start_dt, EscrowDeal.completed_at < end_dt, EscrowDeal.status == "COMPLETED")))
         vol_data.append(float(vol or 0))
-        
+
         fees = await db.scalar(select(func.sum(EscrowDeal.platform_fee_amount)).where(and_(EscrowDeal.completed_at >= start_dt, EscrowDeal.completed_at < end_dt, EscrowDeal.status == "COMPLETED")))
         fees_data.append(float(fees or 0))
 
@@ -271,14 +271,14 @@ async def grant_subscription(
         raise HTTPException(status_code=404, detail="User not found")
 
     now = datetime.now(timezone.utc)
-    
+
     # If currently active, extend from existing end date, otherwise from now
     if user.subscription_end and user.subscription_status == "active" and user.subscription_end > now:
         user.subscription_end = user.subscription_end + timedelta(days=request.days)
     else:
         user.subscription_start = now
         user.subscription_end = now + timedelta(days=request.days)
-        
+
     user.subscription_status = "active"
 
     # Add a subscription record
@@ -317,18 +317,18 @@ async def delete_user(
     vehicles = vehicles_result.scalars().all()
     v_ids = [v.vehicle_id for v in vehicles]
     vins = [v.vin for v in vehicles]
-    
+
     if v_ids:
         await db.execute(LocationHistory.__table__.delete().where(LocationHistory.vehicle_id.in_(v_ids)))
         await db.execute(HourlyScan.__table__.delete().where(HourlyScan.vehicle_id.in_(v_ids)))
         await db.execute(VehicleAlert.__table__.delete().where(VehicleAlert.vehicle_id.in_(v_ids)))
         await db.execute(RepairJob.__table__.delete().where(RepairJob.vehicle_id.in_(v_ids)))
-    
+
     await db.execute(TrackedVehicle.__table__.delete().where(TrackedVehicle.owner_id == user_id))
     await db.execute(Fleet.__table__.delete().where(Fleet.owner_id == user_id))
     await db.execute(ResellerAPIKey.__table__.delete().where(ResellerAPIKey.user_id == user_id))
     await db.execute(Subscription.__table__.delete().where(Subscription.user_id == user_id))
-    
+
     await db.delete(user)
     await db.flush()
 
@@ -343,7 +343,7 @@ async def list_inspectors(
     query = select(User).where(User.role == "inspector")
     result = await db.execute(query)
     users = result.scalars().all()
-    
+
     # Count DCPs issued per inspector
     dcp_result = await db.execute(
         select(DCPRecord.auditor_id, func.count(DCPRecord.id)).group_by(DCPRecord.auditor_id)
@@ -362,7 +362,7 @@ async def list_inspectors(
             "dcp_count": dcp_counts.get(u.user_id, 0),
             "rating": 4.9 # Default high rating for MVP
         })
-        
+
     return {"success": True, "inspectors": inspectors}
 
 
@@ -388,21 +388,21 @@ async def admin_create_user(
 
     user_id = f"USR-{str(uuid.uuid4())[:8].upper()}"
 
-   new_user = User(
-    user_id=user_id,
-    full_name=request.full_name,
-    email=request.email,
-    password_hash=hash_password(request.password),
-    role=request.role,
-    phone=request.phone_number,
-    is_active=True,
-    email_verified=True, # Admins create verified users by default
-    created_at=datetime.now(timezone.utc),
-    updated_at=datetime.now(timezone.utc),
-    subscription_plan='free',
-    subscription_status='active',
-    vehicle_slots=1 if request.role == 'private_owner' else 5 # Default slots
-)
+    new_user = User(
+        user_id=user_id,
+        full_name=request.full_name,
+        email=request.email,
+        password_hash=hash_password(request.password),
+        role=request.role,
+        phone=request.phone_number,
+        is_active=True,
+        email_verified=True, # Admins create verified users by default
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        subscription_plan='free',
+        subscription_status='active',
+        vehicle_slots=1 if request.role == 'private_owner' else 5 # Default slots
+    )
 
     db.add(new_user)
     await db.commit()
@@ -450,7 +450,7 @@ async def list_dcps(
             for d in dcps
         ]
     }
-    
+
 
 @router.delete("/dcps/{dcp_id}", response_model=dict)
 async def delete_dcp(
@@ -463,18 +463,18 @@ async def delete_dcp(
     dcp = result.scalar_one_or_none()
     if not dcp:
         raise HTTPException(status_code=404, detail="DCP not found")
-        
+
     # Delete orphaned escrow links
     await db.execute(EscrowEvent.__table__.delete().where(
         EscrowEvent.escrow_id.in_(select(EscrowDeal.escrow_id).where(EscrowDeal.dcp_id == dcp_id))
     ))
     await db.execute(EscrowDeal.__table__.delete().where(EscrowDeal.dcp_id == dcp_id))
-    
+
     await db.execute(InspectionDetail.__table__.delete().where(InspectionDetail.dcp_id == dcp_id))
     await db.execute(VerificationLog.__table__.delete().where(VerificationLog.dcp_id == dcp_id))
     await db.execute(DCPHashLedger.__table__.delete().where(DCPHashLedger.dcp_id == dcp_id))
     await db.execute(DCPRecord.__table__.delete().where(DCPRecord.dcp_id == dcp_id))
-    
+
     await db.flush()
     return {"success": True, "message": "DCP permanently deleted."}
 
@@ -555,14 +555,14 @@ async def delete_escrow(
     """Hard delete a stuck escrow deal globally."""
     result = await db.execute(select(EscrowDeal).where(EscrowDeal.escrow_id == escrow_id))
     deal = result.scalar_one_or_none()
-    
+
     if not deal:
         raise HTTPException(status_code=404, detail="Escrow not found")
-        
+
     # Delete events first to prevent foreign key errors
     await db.execute(EscrowEvent.__table__.delete().where(EscrowEvent.escrow_id == escrow_id))
     await db.execute(EscrowDeal.__table__.delete().where(EscrowDeal.escrow_id == escrow_id))
-    
+
     await db.flush()
     return {"success": True, "message": "Escrow permanently deleted."}
 
@@ -744,7 +744,7 @@ async def export_global_vehicles(
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["Vehicle ID", "VIN", "Owner ID", "Make", "Model", "Year", "Plate Number", "Status", "Health Score", "OBD Method", "Registered At"])
-    
+
     for v in vehicles:
         writer.writerow([
             v.vehicle_id,
@@ -759,10 +759,10 @@ async def export_global_vehicles(
             v.obd_connection_method,
             v.registered_at.isoformat() if v.registered_at else ""
         ])
-    
+
     output.seek(0)
     filename = f"automat_global_vehicles_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
-    
+
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
