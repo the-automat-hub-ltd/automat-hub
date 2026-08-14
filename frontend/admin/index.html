@@ -23,6 +23,21 @@
       --sans: 'Familjen Grotesk', sans-serif;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
+    /* Form Group */
+    .fg { margin-bottom: 16px; }
+    .fg label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; display: block; }
+    .fg input, .fg select {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--white);
+        padding: 10px 14px;
+        border-radius: 7px;
+        font-size: 13px;
+        outline: none;
+        font-family: var(--sans);
+    }
+    .fg input:focus, .fg select:focus { border-color: var(--orange); }
     body { background:var(--bg); color:var(--white); font-family:var(--sans); min-height:100vh; display:flex; }
 
     /* SIDEBAR */
@@ -237,6 +252,7 @@
     <div class="nav-item" onclick="showPanel('users')"><span class="icon">👥</span>Users</div>
     <div class="nav-item" onclick="showPanel('resellers')"><span class="icon">🔑</span>Resellers</div>
     <div class="nav-item" onclick="showPanel('fleet-owners')"><span class="icon">🚛</span>Fleet Owners</div>
+    <div class="nav-item" onclick="showPanel('inspectors')">🕵️ Inspectors</div>
 
     <div class="nav-section">Network</div>
     <div class="nav-item" onclick="showPanel('workshops')"><span class="icon">🔧</span>Workshops</div>
@@ -383,20 +399,25 @@
 
     <!-- ── USERS PANEL ── -->
     <div class="panel" id="panel-users">
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn btn-ghost btn-sm" onclick="loadUsers()">All</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadUsers('private_owner')">Private</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadUsers('fleet_owner')">Fleet</button>
-        <button class="btn btn-ghost btn-sm" onclick="loadUsers('reseller')">Resellers</button>
-      </div>
       <div class="card">
+        <div class="card-header">
+          <div class="card-title">👥 User Management</div>
+          <button class="btn btn-primary btn-sm" onclick="showCreateUserModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:4px;vertical-align:middle;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Create User
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;padding: 16px 20px 0;">
+          <button class="btn btn-ghost btn-sm" onclick="loadUsers()">All</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadUsers('private_owner')">Private</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadUsers('fleet_owner')">Fleet</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadUsers('reseller')">Resellers</button>
+        </div>
         <table class="table">
           <thead>
             <tr><th>Name</th><th>Email</th><th>Role</th><th>Plan</th><th>Vehicles</th><th>Status</th><th>Actions</th></tr>
           </thead>
-          <tbody id="users-table-body">
-            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">Loading...</td></tr>
-          </tbody>
+          <tbody id="users-table-body"></tbody>
         </table>
       </div>
     </div>
@@ -523,6 +544,72 @@
       </div>
     </div>
 
+    <!-- ── INSPECTORS PANEL ── -->
+    <div class="panel" id="panel-inspectors">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">🕵️ Certified Inspectors</div>
+            </div>
+            <table class="table">
+                <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>DCPs Issued</th><th>Rating</th><th>Status</th></tr></thead>
+                <tbody id="inspectors-table-body">
+                    <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">Loading inspectors...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-backdrop" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;" onclick="closeModal()">
+  <div id="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:500px;animation:fadeUp 0.3s ease;" onclick="event.stopPropagation()">
+    <div class="card-header">
+      <div class="card-title" id="modal-title">Modal Title</div>
+      <div style="font-size:18px;color:var(--muted);cursor:pointer" onclick="closeModal()">×</div>
+    </div>
+    <div class="card-body" id="modal-body">
+      Modal content goes here.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-backdrop" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;" onclick="closeModal()">
+  <div id="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:500px;animation:fadeUp 0.3s ease;" onclick="event.stopPropagation()">
+    <div class="card-header">
+      <div class="card-title" id="modal-title">Modal Title</div>
+      <div style="font-size:18px;color:var(--muted);cursor:pointer" onclick="closeModal()">×</div>
+    </div>
+    <div class="card-body" id="modal-body">
+      Modal content goes here.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-backdrop" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;" onclick="closeModal()">
+  <div id="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:500px;animation:fadeUp 0.3s ease;" onclick="event.stopPropagation()">
+    <div class="card-header">
+      <div class="card-title" id="modal-title">Modal Title</div>
+      <div style="font-size:18px;color:var(--muted);cursor:pointer" onclick="closeModal()">×</div>
+    </div>
+    <div class="card-body" id="modal-body">
+      Modal content goes here.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-backdrop" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;" onclick="closeModal()">
+  <div id="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:500px;animation:fadeUp 0.3s ease;" onclick="event.stopPropagation()">
+    <div class="card-header">
+      <div class="card-title" id="modal-title">Modal Title</div>
+      <div style="font-size:18px;color:var(--muted);cursor:pointer" onclick="closeModal()">×</div>
+    </div>
+    <div class="card-body" id="modal-body">
+      Modal content goes here.
+    </div>
   </div>
 </div>
 
@@ -578,7 +665,8 @@ const titles = {
   'workshops': 'Workshop Network',
   'alerts': 'Vehicle Alerts',
   'revenue': 'Revenue & Billing',
-  'settings': 'System Settings'
+  'settings': 'System Settings',
+  'inspectors': 'Inspector Management'
 };
 
 function showPanel(name) {
@@ -604,6 +692,7 @@ function showPanel(name) {
     'users': loadUsers,
     'workshops': loadWorkshops,
     'alerts': () => loadAlerts(false),
+    'inspectors': loadInspectors,
     'revenue': loadRevenue,
   };
   loaders[name]?.();

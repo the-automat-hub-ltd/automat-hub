@@ -63,18 +63,31 @@ async def get_db(request: Request):
             # Use a transaction block to ensure SET LOCAL is scoped correctly
             async with session.begin():
                 if current_user and current_user.get("user_id"):
-                    await session.execute(text(f"SET LOCAL app.current_user_id = '{current_user['user_id']}'"))
-                    await session.execute(text(f"SET LOCAL app.current_role = '{current_user['role']}'"))
+                    # Use set_config() with bound parameters instead of f-string
+                    # interpolation into SQL, to avoid injection if these values
+                    # ever contain quote characters.
+                    await session.execute(
+                        text("SELECT set_config('app.current_user_id', :val, true)"),
+                        {"val": str(current_user["user_id"])}
+                    )
+                    await session.execute(
+                        text("SELECT set_config('app.current_role', :val, true)"),
+                        {"val": str(current_user["role"])}
+                    )
                 yield session
         except Exception:
             # The 'async with session.begin()' handles rollback automatically on exception.
             raise
 
 async def init_db():
-    """Initialize database tables on startup."""
+    """
+    Verify database connectivity on startup.
+    Schema creation and changes are managed by Alembic migrations —
+    this no longer calls Base.metadata.create_all().
+    """
     try:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            print("DATABASE: Connection established and tables verified.")
+            await conn.execute(text("SELECT 1"))
+            print("DATABASE: Connection established.")
     except Exception as e:
         print(f"DATABASE STARTUP ERROR: {e}")

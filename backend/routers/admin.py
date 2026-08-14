@@ -17,14 +17,15 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, and_
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 import io
 import csv
 import uuid
 
 from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, hash_password
+from backend.schemas.admin import AdminCreateUserRequest
 from backend.models.dcp import DCPRecord, VerificationLog, DCPHashLedger, InspectionDetail
 from backend.models.escrow import EscrowDeal, EscrowEvent
 from backend.models.fleet import TrackedVehicle, HourlyScan, VehicleAlert, LocationHistory, Fleet
@@ -365,6 +366,51 @@ async def list_inspectors(
         })
         
     return {"success": True, "inspectors": inspectors}
+
+
+@router.post("/users/create", response_model=dict, summary="Admin create a new user")
+async def admin_create_user(
+    request: AdminCreateUserRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin)
+):
+    """
+    Allows an admin to create any type of user, including inspectors and other admins.
+    This is a privileged operation and bypasses public registration validation.
+    """
+    # Check if user with this email already exists
+    existing_user_res = await db.execute(
+        select(User).where(User.email == request.email)
+    )
+    if existing_user_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=409,
+            detail=f"A user with the email '{request.email}' already exists."
+        )
+
+    user_id = f"USR-{str(uuid.uuid4())[:8].upper()}"
+
+    new_user = User(
+        user_id=user_id,
+        full_name=request.full_name,
+        email=request.email,
+        password_hash=hash_password(request.password),
+        role=request.role,
+        phone_number=request.phone_number,
+        is_active=True,
+        email_verified=True, # Admins create verified users by default
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        subscription_plan='free',
+        subscription_status='active',
+        vehicle_slots=1 if request.role == 'private_owner' else 5 # Default slots
+    )
+
+    db.add(new_user)
+    await db.commit()
+
+    return {"success": True, "message": f"User '{request.full_name}' created successfully with role '{request.role}'.", "user_id": user_id}
+
 
 # ── DCP MANAGEMENT ───────────────────────────────────────────
 
