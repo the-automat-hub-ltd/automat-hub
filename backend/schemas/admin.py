@@ -11,4 +11,4 @@ class AdminCreateUserRequest(BaseModel):
     email: EmailStr
     password: str
     role: Literal['inspector', 'admin', 'fleet_owner', 'reseller', 'mechanic', 'private_owner']
-    phone_number: str | None = None
+    phone_number: str
