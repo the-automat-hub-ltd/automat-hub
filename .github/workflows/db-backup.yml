@@ -20,7 +20,7 @@ jobs:
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          pg_dump "postgresql://postgres.emqryzqzagmwxjpngprz:${PGPASSWORD}@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" \
+          /usr/lib/postgresql/17/bin/pg_dump "postgresql://postgres.emqryzqzagmwxjpngprz:${PGPASSWORD}@aws-0-eu-west-3.pooler.supabase.com:5432/postgres" \
             --no-owner --no-privileges -F c -f backup_$(date +%Y%m%d_%H%M%S).dump
 
       - name: Send backup via Telegram
